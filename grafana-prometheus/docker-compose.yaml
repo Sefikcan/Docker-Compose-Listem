@@ -1,20 +1,62 @@
-version: '3.4'
+version: '3'
 
 services:
-  prometheus:
-    image: ubuntu/prometheus
-    container_name: dev_prometheus
-    ports:
-      - "30090:9090"
+  kanbersky.monitoring:
+    container_name: kanbersky.monitoring
+    image: ${DOCKER_REGISTRY-}kanberskymonitoring
     environment:
-      - TZ=UTC
-    volumes:
-      - ./prom/prometheus.yml:/etc/prometheus/prometheus.yml
-
-  grafana:
-    image: grafana/grafana
-    container_name: dev_grafana
+      - ASPNETCORE_ENVIRONMENT=Development
     ports:
-      - "30091:3000"
+      - "8085:80"
+    build:
+      context: .
+      dockerfile: src/GrafanaAndPrometheus/Dockerfile
+  
+  prometheus:
+    image: prom/prometheus:v2.21.0
+    ports:
+      - 9000:9090
     volumes:
-      - ./grafana-data/data:/var/lib/grafana
+      - ./prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    command: --web.enable-lifecycle --config.file=/etc/prometheus/prometheus.yml  # If you use --web.enable-lifecycle you can reload configuration files (e.g. rules) without restarting Prometheus:
+  
+  grafana:
+    image: grafana/grafana:7.5.7
+    ports:
+      - 3000:3000
+    restart: unless-stopped
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources # data source configuration
+      - grafana-data:/var/lib/grafana # used to save dashboards
+
+  alertmanager:
+    image: prom/alertmanager:v0.23.0
+    restart: always
+    ports:
+      - "9093:9093"
+    volumes:
+      - "./alertmanager:/config"
+      - alertmanager-data:/data
+    command: --config.file=/config/alertmanager.yml --log.level=debug
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    expose:
+      - 9100
+
+volumes:
+  prometheus-data:
+  grafana-data:
+  alertmanager-data:

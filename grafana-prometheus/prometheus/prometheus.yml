@@ -1,0 +1,41 @@
+global:
+  # How frequently to scrape targets
+  scrape_interval:     10s
+  # How frequently to evaluate rules
+  evaluation_interval: 10s
+
+# Rules and alerts are read from the specified file(s)
+rule_files:
+  - alert.yml
+
+# Alerting specifies settings related to the Alertmanager
+alerting:
+  alertmanagers:
+    - static_configs:
+      - targets:
+        # Alertmanager's default port is 9093
+        - alertmanager:9093
+
+# A list of scrape configurations that specifies a set of
+# targets and parameters describing how to scrape them.
+scrape_configs:
+  - job_name: 'prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets:
+        - prometheus:9090
+  - job_name: 'node_exporter'
+    scrape_interval: 5s
+    static_configs:
+      - targets:
+        - node_exporter:9100
+  - job_name: 'prom_middleware'
+    scrape_interval: 5s
+    static_configs:
+      - targets:
+        - prom_middleware:9091
+  - job_name: 'kanbersky.monitoring'
+    scrape_interval: 5s
+    static_configs:
+      - targets:
+          - "host.docker.internal:xxxx"
